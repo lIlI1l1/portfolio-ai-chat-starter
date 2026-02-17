@@ -37,9 +37,10 @@ export async function POST(req: Request) {
     });
 
     const data = await response.json();
-    return NextResponse.json({ answer: data.choices[0].message.content });
+    return NextResponse.json({ response: data.choices[0].message.content };
     
   } catch (error) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
+
