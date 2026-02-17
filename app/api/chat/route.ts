@@ -7,6 +7,18 @@ const supabase = createClient(
 );
 
 export async function POST(req: Request) {
+  // --- 1. AJOUT DU CORS POUR FRAMER ---
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  };
+
+  // Gestion de la vérification de sécurité du navigateur
+  if (req.method === 'OPTIONS') {
+    return new NextResponse(null, { headers });
+  }
+
   try {
     const { message, conversationHistory } = await req.json();
 
@@ -18,7 +30,7 @@ export async function POST(req: Request) {
 
     const context = documents?.map(d => d.content).join('\n') || '';
 
-    // Appel à Groq avec le modèle mentionné dans son guide
+    // Appel à Groq
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -26,9 +38,9 @@ export async function POST(req: Request) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: "llama-3.3-70b-versatile", // Le modèle de son guide
+        model: "llama-3.3-70b-versatile",
         messages: [
-          { role: 'system', content: `You are a UX portfolio assistant. Use this context: ${context}` },
+          { role: 'system', content: `You are a UX portfolio assistant. Answer in 2-4 sentences max. Context: ${context}` },
           ...conversationHistory,
           { role: 'user', content: message }
         ],
@@ -37,10 +49,19 @@ export async function POST(req: Request) {
     });
 
     const data = await response.json();
-    return NextResponse.json({ response: data.choices[0].message.content };
+
+    // --- 2. RENVOYER LES DEUX NOMS (answer ET response) POUR ÊTRE SÛRE ---
+    const aiMessage = data.choices[0].message.content;
+    return NextResponse.json(
+      { answer: aiMessage, response: aiMessage }, 
+      { headers }
+    );
     
   } catch (error) {
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    console.error(error);
+    return NextResponse.json(
+      { error: 'Internal Server Error' }, 
+      { status: 500, headers }
+    );
   }
 }
-
