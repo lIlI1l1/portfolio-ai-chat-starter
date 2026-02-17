@@ -7,22 +7,22 @@ const supabase = createClient(
 );
 
 export async function POST(req: Request) {
-  // --- 1. AJOUT DU CORS POUR FRAMER ---
+  // 1. Définition des headers de sécurité (CORS)
   const headers = {
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': '*', // Autorise Framer et les autres domaines
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   };
 
-  // Gestion de la vérification de sécurité du navigateur
+  // 2. Gestion de la requête "OPTIONS" (Vérification automatique du navigateur)
   if (req.method === 'OPTIONS') {
-    return new NextResponse(null, { headers });
+    return new NextResponse(null, { headers, status: 204 });
   }
 
   try {
     const { message, conversationHistory } = await req.json();
 
-    // Récupère les infos de ton portfolio dans Supabase
+    // Récupération du contexte Supabase
     const { data: documents } = await supabase
       .from('portfolio_knowledge')
       .select('content')
@@ -40,7 +40,7 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         model: "llama-3.3-70b-versatile",
         messages: [
-          { role: 'system', content: `You are a UX portfolio assistant. Answer in 2-4 sentences max. Context: ${context}` },
+          { role: 'system', content: `You are a UX portfolio assistant. Answer in 2-4 sentences. Context: ${context}` },
           ...conversationHistory,
           { role: 'user', content: message }
         ],
@@ -49,9 +49,9 @@ export async function POST(req: Request) {
     });
 
     const data = await response.json();
-
-    // --- 2. RENVOYER LES DEUX NOMS (answer ET response) POUR ÊTRE SÛRE ---
     const aiMessage = data.choices[0].message.content;
+
+    // 3. On renvoie la réponse avec les headers inclus
     return NextResponse.json(
       { answer: aiMessage, response: aiMessage }, 
       { headers }
