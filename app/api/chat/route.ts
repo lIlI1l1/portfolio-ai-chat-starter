@@ -7,22 +7,9 @@ const supabase = createClient(
 );
 
 export async function POST(req: Request) {
-  // 1. Définition des headers de sécurité (CORS)
-  const headers = {
-    'Access-Control-Allow-Origin': '*', // Autorise Framer et les autres domaines
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  };
-
-  // 2. Gestion de la requête "OPTIONS" (Vérification automatique du navigateur)
-  if (req.method === 'OPTIONS') {
-    return new NextResponse(null, { headers, status: 204 });
-  }
-
   try {
     const { message, conversationHistory } = await req.json();
 
-    // Récupération du contexte Supabase
     const { data: documents } = await supabase
       .from('portfolio_knowledge')
       .select('content')
@@ -30,7 +17,6 @@ export async function POST(req: Request) {
 
     const context = documents?.map(d => d.content).join('\n') || '';
 
-    // Appel à Groq
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -51,17 +37,11 @@ export async function POST(req: Request) {
     const data = await response.json();
     const aiMessage = data.choices[0].message.content;
 
-    // 3. On renvoie la réponse avec les headers inclus
-    return NextResponse.json(
-      { answer: aiMessage, response: aiMessage }, 
-      { headers }
-    );
+    // IMPORTANT : On ne met PLUS de headers ici, le middleware s'en occupe
+    return NextResponse.json({ answer: aiMessage, response: aiMessage });
     
   } catch (error) {
     console.error(error);
-    return NextResponse.json(
-      { error: 'Internal Server Error' }, 
-      { status: 500, headers }
-    );
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
